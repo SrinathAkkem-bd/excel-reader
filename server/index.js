@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx';
 import csvParser from 'csv-parser';
 import fs from 'fs';
 import path from 'path';
@@ -77,7 +77,12 @@ const processCSV = (filePath) => {
 // Utility function to process Excel files
 const processExcel = (filePath) => {
   try {
-    const workbook = XLSX.readFile(filePath);
+    console.log('XLSX object:', typeof XLSX, Object.keys(XLSX));
+    
+    // Read the file as buffer first
+    const fileBuffer = fs.readFileSync(filePath);
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+    
     const sheetNames = workbook.SheetNames;
     const result = {};
     
@@ -89,6 +94,7 @@ const processExcel = (filePath) => {
     
     return result;
   } catch (error) {
+    console.error('Excel processing error:', error);
     throw new Error(`Error processing Excel file: ${error.message}`);
   }
 };
@@ -182,6 +188,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     } catch (processingError) {
       console.error('\n=== Processing Error ===');
       console.error('Error details:', processingError.message);
+      console.error('Stack trace:', processingError.stack);
       
       // Clean up file on error
       if (fs.existsSync(filePath)) {
@@ -197,6 +204,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   } catch (error) {
     console.error('\n=== Upload Error ===');
     console.error('Error details:', error.message);
+    console.error('Stack trace:', error.stack);
     
     res.status(500).json({
       success: false,
@@ -235,5 +243,7 @@ app.use((error, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📁 File uploads will be processed and logged here\n`);
+  console.log(`📁 File uploads will be processed and logged here`);
+  console.log(`📊 XLSX library loaded:`, typeof XLSX !== 'undefined' ? '✅' : '❌');
+  console.log('');
 });
